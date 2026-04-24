@@ -1,0 +1,70 @@
+[project]
+name = "consulting-scheduler"
+version = "0.1.0"
+description = "Résolution optimale d'un problème d'affectation hebdomadaire (CLI + GUI Streamlit)"
+authors = [
+    { name = "Sacha" }
+]
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "typer>=0.12",
+    "rich>=13.7"
+]
+
+[project.optional-dependencies]
+gui = [
+    "streamlit>=1.36",
+    "pandas>=2.2",
+    "altair>=5.3"
+]
+dev = [
+    "pytest>=7.4",
+    "pytest-cov>=4.1",
+    "hypothesis>=6.100",
+    "mypy>=1.10",
+    "ruff>=0.5",
+    "pre-commit>=3.7"
+]
+
+[project.scripts]
+consulting-scheduler = "consulting_scheduler.cli:main"
+consulting-scheduler-gui = "consulting_scheduler.cli:run_gui"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# -----------------------------
+# UV configuration
+# -----------------------------
+[tool.uv]
+package = true
+
+# -----------------------------
+# Pytest
+# -----------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=consulting_scheduler --cov-report=term-missing"
+
+# -----------------------------
+# Ruff (lint + format)
+# -----------------------------
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+# -----------------------------
+# MyPy
+# -----------------------------
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true

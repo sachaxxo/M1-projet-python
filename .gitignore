@@ -1,0 +1,37 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environnements virtuels
+.venv/
+venv/
+env/
+
+# Caches outils
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.coverage
+.coverage.*
+htmlcov/
+pytest-cache-files-*/
+
+# Build / dist
+build/
+dist/
+*.egg-info/
+*.egg
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Divers
+.DS_Store
+Thumbs.db

@@ -15,6 +15,8 @@ Lancement :
 
 from __future__ import annotations
 
+from typing import Any, cast
+
 import altair as alt
 import pandas as pd
 import streamlit as st
@@ -31,9 +33,9 @@ EASY_DEFAULT: list[int] = [10, 1, 10, 10]
 HARD_DEFAULT: list[int] = [5, 50, 5, 50]
 
 TASK_COLOR: dict[WeekTask, str] = {
-    WeekTask.EASY: "#22c55e",   # vert
-    WeekTask.HARD: "#f59e0b",   # orange
-    WeekTask.REST: "#94a3b8",   # gris
+    WeekTask.EASY: "#22c55e",  # vert
+    WeekTask.HARD: "#f59e0b",  # orange
+    WeekTask.REST: "#94a3b8",  # gris
 }
 TASK_EMOJI: dict[WeekTask, str] = {
     WeekTask.EASY: "🟢",
@@ -77,9 +79,7 @@ def _gain_for_week(problem: Problem, i: int, task: WeekTask) -> int:
     return 0
 
 
-def _result_dataframe(
-    problem: Problem, schedule: tuple[WeekTask, ...]
-) -> pd.DataFrame:
+def _result_dataframe(problem: Problem, schedule: tuple[WeekTask, ...]) -> pd.DataFrame:
     """Tableau récapitulatif : semaine / action / profits / gain retenu."""
     rows = [
         {
@@ -94,10 +94,11 @@ def _result_dataframe(
     return pd.DataFrame(rows)
 
 
-def _color_action_cell(value: str) -> str:
+def _color_action_cell(value: Any) -> str:
     """Style pandas pour la colonne « Action » (badge coloré)."""
+    text = str(value)
     for task in WeekTask:
-        if task.value in value:
+        if task.value in text:
             color = TASK_COLOR[task]
             return f"background-color: {color}; color: white; font-weight: 600;"
     return ""
@@ -127,7 +128,7 @@ def _profits_chart(problem: Problem, schedule: tuple[WeekTask, ...]) -> alt.Char
         )
     df = pd.DataFrame(records)
 
-    return (
+    chart = (
         alt.Chart(df)
         .mark_bar()
         .encode(
@@ -142,9 +143,7 @@ def _profits_chart(problem: Problem, schedule: tuple[WeekTask, ...]) -> alt.Char
                 ),
                 legend=alt.Legend(title="Type de travail"),
             ),
-            opacity=alt.condition(
-                alt.datum.Retenu, alt.value(1.0), alt.value(0.25)
-            ),
+            opacity=alt.condition(alt.datum.Retenu, alt.value(1.0), alt.value(0.25)),
             tooltip=[
                 alt.Tooltip("Semaine:O"),
                 alt.Tooltip("Type:N"),
@@ -154,6 +153,7 @@ def _profits_chart(problem: Problem, schedule: tuple[WeekTask, ...]) -> alt.Char
         )
         .properties(height=320)
     )
+    return cast(alt.Chart, chart)
 
 
 def _cumulative_gain_chart(
@@ -166,7 +166,7 @@ def _cumulative_gain_chart(
         running += _gain_for_week(problem, i, task)
         cumul.append(running)
     df = pd.DataFrame({"Semaine": range(1, problem.n + 1), "Gain cumulé (€)": cumul})
-    return (
+    chart = (
         alt.Chart(df)
         .mark_area(line=True, opacity=0.35, color="#22c55e")
         .encode(
@@ -176,6 +176,7 @@ def _cumulative_gain_chart(
         )
         .properties(height=240)
     )
+    return cast(alt.Chart, chart)
 
 
 # ---------------------------------------------------------------------------
@@ -185,7 +186,7 @@ def _cumulative_gain_chart(
 
 def _init_session_state() -> None:
     """Crée les clés persistées si elles n'existent pas encore."""
-    defaults = {
+    defaults: dict[str, Any] = {
         "easy_csv": ",".join(str(x) for x in EASY_DEFAULT),
         "hard_csv": ",".join(str(x) for x in HARD_DEFAULT),
         "table": _default_table(),
@@ -220,7 +221,7 @@ def _clear_all() -> None:
 # ---------------------------------------------------------------------------
 
 
-def _render_sidebar() -> None:
+def _render_sidebar() -> None:  # pragma: no cover
     with st.sidebar:
         st.title("📅 Consulting Scheduler")
         st.caption(f"v{__version__} — Sujet 06 (DP)")
@@ -249,7 +250,7 @@ def _render_sidebar() -> None:
         )
 
 
-def _render_csv_tab() -> None:
+def _render_csv_tab() -> None:  # pragma: no cover
     col1, col2 = st.columns(2)
     with col1:
         st.text_input(
@@ -288,7 +289,7 @@ def _render_csv_tab() -> None:
         st.session_state.error = None
 
 
-def _render_table_tab() -> None:
+def _render_table_tab() -> None:  # pragma: no cover
     st.markdown(
         "Édite directement les profits, ajoute ou supprime des lignes "
         "avec le `+` en bas du tableau. Le numéro de ligne correspond au "
@@ -329,7 +330,7 @@ def _render_table_tab() -> None:
         st.session_state.error = None
 
 
-def _render_results(problem: Problem) -> None:
+def _render_results(problem: Problem) -> None:  # pragma: no cover
     if problem.n == 0:
         st.warning("Aucune semaine à planifier — gain optimal = 0 €.")
         return
@@ -363,9 +364,7 @@ def _render_results(problem: Problem) -> None:
         "Les barres pleines correspondent à l'action retenue par le solveur "
         "(les autres sont estompées)."
     )
-    st.altair_chart(
-        _profits_chart(problem, result.schedule), use_container_width=True
-    )
+    st.altair_chart(_profits_chart(problem, result.schedule), use_container_width=True)
 
     st.subheader("Gain cumulé")
     st.altair_chart(
@@ -385,7 +384,7 @@ def _render_results(problem: Problem) -> None:
 # ---------------------------------------------------------------------------
 
 
-def main() -> None:
+def main() -> None:  # pragma: no cover
     """Point d'entrée Streamlit (exécuté par ``streamlit run app.py``)."""
     st.set_page_config(
         page_title="Consulting Scheduler",
@@ -404,9 +403,7 @@ def main() -> None:
         "en semaine précédente »."
     )
 
-    tab_csv, tab_table = st.tabs(
-        ["⚡ Saisie rapide (CSV)", "📋 Tableau éditable"]
-    )
+    tab_csv, tab_table = st.tabs(["⚡ Saisie rapide (CSV)", "📋 Tableau éditable"])
     with tab_csv:
         _render_csv_tab()
     with tab_table:

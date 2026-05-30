@@ -33,7 +33,7 @@ Objectif : **maximiser** la somme des profits sur `n` semaines.
 
 Le package `consulting_scheduler` fournit :
 
-- un solveur **O(n)** en temps et en mémoire (`solve`, `solve_schedule`) ;
+- un solveur **O(n)** en temps et en mémoire — une seule API `solve` ;
 - des types immuables et typés strictement (`Problem`, `ScheduleResult`, `WeekTask`) ;
 - une **CLI** colorée `consulting-scheduler` (Typer + Rich) ;
 - une **interface graphique** Streamlit avec deux modes de saisie ;
@@ -145,9 +145,13 @@ consulting-scheduler --version
 ### Depuis Python
 
 ```python
-from consulting_scheduler import solve_schedule
+from consulting_scheduler import Problem, solve
 
-result = solve_schedule(easy=[10, 1, 10, 10], hard=[5, 50, 5, 50])
+# Forme orientée objet
+result = solve(Problem.from_sequences([10, 1, 10, 10], [5, 50, 5, 50]))
+# ... ou directement avec des séquences
+result = solve(easy=[10, 1, 10, 10], hard=[5, 50, 5, 50])
+
 print(result.total_gain)     # 100
 print(result.schedule)       # (REST, HARD, REST, HARD)
 print(result.pretty())
@@ -171,7 +175,8 @@ consulting-scheduler/
 ├── tests/
 │   ├── test_models.py
 │   ├── test_solver.py            # + property-based + oracle brute-force
-│   └── test_app.py               # GUI : helpers + smoke import
+│   ├── test_cli.py               # CLI Typer + helpers
+│   └── test_app.py               # GUI : helpers, charts, session_state
 ├── main.py                       # Point d'entrée sans install
 ├── pyproject.toml
 ├── .pre-commit-config.yaml

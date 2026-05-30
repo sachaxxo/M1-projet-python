@@ -1,3 +1,6 @@
+# Configuration pré-commit : ruff (lint + format), mypy strict, hygiène fichiers.
+# Pour activer : `pre-commit install` (une fois).
+# Pour exécuter sur tout le dépôt : `pre-commit run --all-files`.
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
@@ -8,6 +11,7 @@ repos:
       - id: check-toml
       - id: check-added-large-files
       - id: check-merge-conflict
+      - id: debug-statements
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.5.0
@@ -20,8 +24,18 @@ repos:
     rev: v1.10.0
     hooks:
       - id: mypy
+        # Tous les modules importés à l'exécution doivent être disponibles
+        # ici pour que mypy puisse vraiment vérifier les fichiers.
         additional_dependencies:
           - typer>=0.12
           - rich>=13.7
+          - streamlit>=1.36
+          - pandas>=2.2
+          - pandas-stubs>=2.2
+          - altair>=5.3
+          - hypothesis>=6.100
+          - pytest>=7.4
         args: [--config-file=pyproject.toml]
-        files: ^src/
+        # On laisse mypy lire sa liste de fichiers depuis pyproject.toml
+        # (files = ["src", "tests"]), donc on désactive le pass_filenames.
+        pass_filenames: false

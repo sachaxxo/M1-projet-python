@@ -20,24 +20,15 @@ Soit ``OPT(i)`` le gain maximal atteignable pour les semaines ``1..i``.
 
     OPT(0) = 0
 
-    OPT(i) = \\max \\bigl(
-        OPT(i-1),           \\quad\\text{# repos en } i  \\\\
-        OPT(i-1) + l_i,     \\quad\\text{# facile en } i  \\\\
-        OPT(i-2) + h_i      \\quad\\text{# difficile en } i
-    \\bigr)
+    OPT(i) = \max \bigl(
+        OPT(i-1),           \quad\text{# repos en } i  \\
+        OPT(i-1) + l_i,     \quad\text{# facile en } i  \\
+        OPT(i-2) + h_i      \quad\text{# difficile en } i
+    \bigr)
 
 La convention ``OPT(-1) = 0`` permet le cas ``i = 1`` (un travail difficile
 en semaine 1 ne demande pas de repos préalable puisqu'il n'y a pas de
 semaine 0).
-
-Correction
-----------
-La récurrence énumère exhaustivement les trois actions possibles pour la
-dernière semaine. Pour un choix donné, la suite optimale sur les semaines
-précédentes est un sous-problème de même nature, indépendant du choix
-présent (sauf pour *difficile*, qui force un repos en ``i-1`` — ce qui
-est capturé en sautant à ``OPT(i-2)``). Le principe d'optimalité de
-Bellman s'applique donc.
 
 Complexité
 ----------
@@ -52,36 +43,61 @@ from collections.abc import Sequence
 from consulting_scheduler.models import Problem, ScheduleResult, WeekTask
 
 
-def solve(problem: Problem) -> ScheduleResult:
+def solve(
+    problem: Problem | None = None,
+    *,
+    easy: Sequence[int] | None = None,
+    hard: Sequence[int] | None = None,
+) -> ScheduleResult:
     """Calcule le gain optimal et le planning associé.
 
+    Deux usages équivalents :
+
+    * orienté objet :
+      ``solve(Problem.from_sequences([10, 1], [5, 50]))`` ;
+    * raccourci :
+      ``solve(easy=[10, 1], hard=[5, 50])``.
+
     Args:
-        problem: instance du problème à résoudre.
+        problem: instance du problème (mode orienté objet).
+        easy:    profits faciles ``l_1, ..., l_n`` (mode raccourci).
+        hard:    profits difficiles ``h_1, ..., h_n`` (mode raccourci).
 
     Returns:
         Un :class:`ScheduleResult` contenant le gain optimal et le planning.
+
+    Raises:
+        TypeError: si on mélange les deux modes ou qu'aucun n'est fourni.
     """
+    if problem is None:
+        if easy is None or hard is None:
+            raise TypeError(
+                "solve() attend soit un Problem, soit les mots-clés "
+                "easy=... et hard=..."
+            )
+        problem = Problem.from_sequences(easy, hard)
+    elif easy is not None or hard is not None:
+        raise TypeError(
+            "solve() : passe soit un Problem, soit easy/hard, pas les deux."
+        )
+
     n = problem.n
     if n == 0:
         return ScheduleResult(total_gain=0, schedule=())
 
-    easy = problem.easy
-    hard = problem.hard
+    easy_t = problem.easy
+    hard_t = problem.hard
 
     # dp[i] = OPT(i), gain maximal pour les semaines 1..i
     dp: list[int] = [0] * (n + 1)
-
-    # choice[i] = action retenue pour la semaine i dans la solution optimale
-    # (initialisée à REST ; les semaines effectivement REST dans le planning
-    # final sont celles imposées par un travail difficile en i+1 ou,
-    # rarement, un pur repos volontaire si les profits sont négatifs).
+    # choice[i] = action retenue pour la semaine i dans la solution optimale.
     choice: list[WeekTask] = [WeekTask.REST] * (n + 1)
 
     for i in range(1, n + 1):
         rest_gain = dp[i - 1]
-        easy_gain = dp[i - 1] + easy[i - 1]
-        # dp[-1] traité comme 0 (aucun historique avant la semaine 1)
-        hard_gain = (dp[i - 2] if i >= 2 else 0) + hard[i - 1]
+        easy_gain = dp[i - 1] + easy_t[i - 1]
+        # dp[-1] est traité comme 0 (aucun historique avant la semaine 1).
+        hard_gain = (dp[i - 2] if i >= 2 else 0) + hard_t[i - 1]
 
         # On choisit strictement la meilleure action ; en cas d'égalité,
         # on privilégie EASY > HARD > REST pour produire un planning stable.
@@ -112,13 +128,3 @@ def solve(problem: Problem) -> ScheduleResult:
             i -= 1
 
     return ScheduleResult(total_gain=dp[n], schedule=tuple(schedule))
-
-
-def solve_schedule(
-    easy: Sequence[int], hard: Sequence[int]
-) -> ScheduleResult:
-    """Variante pratique prenant directement deux séquences d'entiers.
-
-    Équivalent à ``solve(Problem.from_sequences(easy, hard))``.
-    """
-    return solve(Problem.from_sequences(easy, hard))

@@ -20,8 +20,8 @@ from rich.panel import Panel
 from rich.table import Table
 
 from consulting_scheduler import __version__
-from consulting_scheduler.models import WeekTask
-from consulting_scheduler.solver import solve_schedule
+from consulting_scheduler.models import Problem, WeekTask
+from consulting_scheduler.solver import solve
 
 app = typer.Typer(
     name="consulting-scheduler",
@@ -45,7 +45,7 @@ def _parse_csv_ints(value: str, name: str) -> list[int]:
 def _version_callback(show: bool) -> None:
     if show:
         console.print(f"consulting-scheduler {__version__}")
-        raise typer.Exit()
+        raise typer.Exit
 
 
 @app.callback()
@@ -61,8 +61,49 @@ def _root(
     """Point d'entrée racine (utilisé pour l'option ``--version``)."""
 
 
-@app.command()
-def solve(
+def _render_result(
+    problem: Problem,
+    schedule: tuple[WeekTask, ...],
+    total_gain: int,
+) -> None:
+    """Affiche le panel récapitulatif + le tableau du planning (Rich)."""
+    console.print(
+        Panel.fit(
+            f"[bold green]{total_gain} €[/bold green]",
+            title="Gain optimal",
+            border_style="green",
+        )
+    )
+
+    table = Table(title="Planning optimal", show_lines=False)
+    table.add_column("Semaine", justify="right", style="cyan", no_wrap=True)
+    table.add_column("Action", style="magenta")
+    table.add_column("Gain (€)", justify="right", style="green")
+
+    style_for = {
+        WeekTask.EASY: "green",
+        WeekTask.HARD: "bold yellow",
+        WeekTask.REST: "dim",
+    }
+
+    for i, task in enumerate(schedule, start=1):
+        if task is WeekTask.EASY:
+            gain = problem.easy[i - 1]
+        elif task is WeekTask.HARD:
+            gain = problem.hard[i - 1]
+        else:
+            gain = 0
+        table.add_row(
+            str(i),
+            f"[{style_for[task]}]{task.value}[/{style_for[task]}]",
+            str(gain),
+        )
+
+    console.print(table)
+
+
+@app.command(name="solve")
+def solve_cmd(
     easy: str = typer.Option(  # noqa: B008
         ...,
         "--easy",
@@ -92,43 +133,9 @@ def solve(
         console.print("[yellow]Aucune semaine fournie : gain = 0.[/yellow]")
         raise typer.Exit(code=0)
 
-    result = solve_schedule(easy_profits, hard_profits)
-
-    # Panel récapitulatif
-    console.print(
-        Panel.fit(
-            f"[bold green]{result.total_gain} €[/bold green]",
-            title="Gain optimal",
-            border_style="green",
-        )
-    )
-
-    # Table du planning
-    table = Table(title="Planning optimal", show_lines=False)
-    table.add_column("Semaine", justify="right", style="cyan", no_wrap=True)
-    table.add_column("Action", style="magenta")
-    table.add_column("Gain (€)", justify="right", style="green")
-
-    style_for = {
-        WeekTask.EASY: "green",
-        WeekTask.HARD: "bold yellow",
-        WeekTask.REST: "dim",
-    }
-
-    for i, task in enumerate(result.schedule, start=1):
-        if task is WeekTask.EASY:
-            gain = easy_profits[i - 1]
-        elif task is WeekTask.HARD:
-            gain = hard_profits[i - 1]
-        else:
-            gain = 0
-        table.add_row(
-            str(i),
-            f"[{style_for[task]}]{task.value}[/{style_for[task]}]",
-            str(gain),
-        )
-
-    console.print(table)
+    problem = Problem.from_sequences(easy_profits, hard_profits)
+    result = solve(problem)
+    _render_result(problem, result.schedule, result.total_gain)
 
 
 @app.command()
@@ -137,12 +144,12 @@ def example() -> None:
     easy_profits = [10, 1, 10, 10]
     hard_profits = [5, 50, 5, 50]
     console.print(f"[cyan]Exemple :[/cyan] easy={easy_profits}, hard={hard_profits}")
-    result = solve_schedule(easy_profits, hard_profits)
+    result = solve(easy=easy_profits, hard=hard_profits)
     console.print(result.pretty())
 
 
 def _silence_streamlit_first_run() -> None:
-    """Évite le prompt email du premier lancement et coupe la télémétrie.
+    """Évite le prompt e-mail du premier lancement et coupe la télémétrie.
 
     Streamlit demande une adresse e-mail au tout premier lancement si
     ``~/.streamlit/credentials.toml`` n'existe pas. On crée un fichier
@@ -168,7 +175,7 @@ def run_gui() -> None:  # pragma: no cover
             "[bold red]Streamlit n'est pas installé.[/bold red]\n"
             "Installe l'extra GUI :\n"
             "  [cyan]uv sync --extra gui[/cyan]   ou   "
-            "[cyan]pip install -e \".[gui]\"[/cyan]"
+            '[cyan]pip install -e ".[gui]"[/cyan]'
         )
         raise typer.Exit(code=1) from exc
 

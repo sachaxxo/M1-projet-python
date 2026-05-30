@@ -10,16 +10,15 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 
-class WeekTask(str, Enum):  # noqa: UP042
+class WeekTask(StrEnum):
     """Action réalisable durant une semaine.
 
-    Hériter de str et Enum donne la comparaison naturelle avec une
-    chaîne (WeekTask.EASY == "facile") tout en gardant la sécurité
-    d'un Enum. (Python 3.11+ permet d'utiliser StrEnum directement
-    pour le même résultat.)
+    ``StrEnum`` (Python 3.11+) donne la comparaison naturelle avec une
+    chaîne (``WeekTask.EASY == "facile"``) tout en gardant la sécurité
+    d'un ``Enum``.
     """
 
     EASY = "facile"
